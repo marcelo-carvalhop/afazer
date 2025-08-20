@@ -1,0 +1,332 @@
+* aFazer — Documento de Requisitos e Desenho Técnico (v1, revisado sem criptografia na versão inicial)
+
+** 1. Objetivo e escopo
+
+O aFazer é um programa de linha de comando para criar, listar e gerenciar tarefas, oferecendo modo interativo (TUI) e subcomandos/flags no estilo das ferramentas de terminal. A persistência é realizada em arquivos .todo por diretório; na versão inicial, o conteúdo é JSON puro (sem criptografia). A arquitetura é desenhada para permitir, no futuro, adicionar criptografia, proteção por senha e até troca do provedor de armazenamento por banco de dados, sem reescrita ampla.
+
+** 2. Convenções
+
+O nome do programa é aFazer (executável afazer). Toda a interface é em pt-BR. O formato de dados em disco é JSON. A TUI é rica porém leve (baseada em ncurses/PDCurses e opcional no build). Testes utilizam framework open source (Catch2). O projeto constrói com CMake em Linux e Windows.
+
+** 3. Requisitos funcionais
+
+O sistema oferece CRUD de tarefas com metadados como título, descrição (Markdown simples), prioridade (baixa, média, alta), status (a_fazer, em_andamento, bloqueada, concluida, arquivada), etiquetas, projeto, datas (criação, modificação, vencimento), tempo estimado e gasto, dependências e subtarefas. Há recorrência simples (diária, semanal, mensal). É possível filtrar e ordenar por status, prioridade, vencimento, etiquetas, projeto, texto e intervalos de datas. Exportações contemplam .txt, .org, .csv, .md e .json; importações aceitam .json, .csv e .txt. O usuário seleciona e alterna diretórios de trabalho (cada um com seu arquivo .todo), e o sistema realiza escrita atômica, backups rotativos e bloqueio de arquivo para evitar corrupção. O desempenho deve atender a dezenas de milhares de tarefas com boa responsividade.
+
+Como a versão inicial não tem senha nem criptografia, qualquer arquivo .todo pode ser aberto, copiado e inspecionado como texto. O programa deixa isso claro ao usuário.
+
+** 4. Requisitos não funcionais
+
+O código é modular, testável, e usa práticas modernas de C++ (RAII, smart pointers, std::filesystem, std::chrono, std::optional, std::variant e std::expected quando disponível). Há separação de camadas (núcleo, armazenamento, CLI, TUI, configuração e utilitários). O build via CMake aplica flags estritas e sanitizers em Debug. As mensagens são claras em pt-BR, e erros retornam códigos de saída específicos. O desempenho é responsivo com coleções grandes.
+
+** 5. Especificação da CLI
+
+Os subcomandos, todos em português e sem menções a senha/criptografia na v1, incluem: iniciar, usar, adicionar, listar, mostrar, editar, concluir, reabrir, excluir (com opção definitiva), limpar (lixeira), arquivar e desarquivar, etiquetas, importar e exportar, backup e restaurar, validar (integridade do JSON e estrutura), info (metadados da coleção). Opções comuns incluem diretório, saída em JSON (--saida-json), filtros, ordenação, período, paginação, cores, verbosidade, modo não interativo e modo TUI.
+
+Exemplos: afazer iniciar --diretorio ~/tarefas; afazer adicionar "Preparar apresentação" --prioridade alta --vencer 2025-01-31; afazer listar --filtro status=a_fazer,etiquetas=urgente --ordenar vencer,prioridade; afazer exportar --formato csv --saida tarefas.csv.
+
+A opção validar verifica se o arquivo .todo é JSON válido, aderente ao schema esperado, e se índices internos são coerentes (por exemplo, ausência de IDs duplicados).
+
+** 6. Casos de uso (resumo)
+
+O fluxo de iniciar cria o arquivo .todo JSON no diretório escolhido, com cabeçalho lógico na estrutura e contadores iniciais. Usar seleciona e carrega uma coleção existente, aplicando lock para impedir concorrência em escrita. Adicionar, listar, mostrar, editar, concluir e reabrir manipulam tarefas e atualizam histórico e timestamps. Exportar e importar transformam dados entre os formatos suportados. Backup cria cópias com timestamp, e restaurar substitui o arquivo ativo por uma cópia escolhida. Validar verifica integridade estrutural do JSON e dos índices.
+
+Erros típicos incluem argumento inválido, ID inexistente, conflito de lock, falha de IO e arquivo malformado.
+
+** 7. Erros e códigos de saída
+
+Os códigos de saída são padronizados: 0 indica sucesso; 1 é erro genérico; 2 significa arquivo .todo inválido ou corrompido; 3 fica reservado para futura criptografia/senha; 4 sinaliza arquivo em uso (lock ativo); 5 indica permissão negada ou erro de IO; 6 trata de argumentos ou validações inválidas; 7 significa item não encontrado; 8 é conflito (como já existe); 9 cobre dependência ausente ou indisponível (por exemplo, ncurses no TUI); 10 representa operação cancelada pelo usuário.
+
+Com --saida-json, as respostas seguem um objeto com chaves em português, contendo sucesso, codigo_saida e, em caso de falha, erro e mensagem.
+
+** 8. Formato de arquivo .todo (JSON puro)
+
+O arquivo em disco é um JSON único com campos como colecao (metadados), config (preferências), tarefas (lista de objetos), historico (eventos), e indices (como o último ID atribuído). Os timestamps são em UTC, e a data de vencimento usa formato YYYY-MM-DD. Exemplo resumido:
+
+{
+  "colecao": { "id": "uuid", "nome": "Pessoal", "criada_em": "2025-01-10T12:34:56Z", "modificada_em": "2025-01-10T12:34:56Z", "versao_schema": 1 },
+  "config": { "preferencias": { "cores": true, "formato_data": "YYYY-MM-DD" } },
+  "tarefas": [
+    {
+      "id": 123,
+      "titulo": "Exemplo",
+      "descricao": "Markdown **ok**",
+      "prioridade": "alta",
+      "status": "a_fazer",
+      "etiquetas": ["trabalho", "urgente"],
+      "projeto": "OKR Q1",
+      "criada_em": "2025-01-10T12:34:56Z",
+      "modificada_em": "2025-01-10T12:34:56Z",
+      "vencer_em": "2025-01-31",
+      "tempo_estimado_min": 60,
+      "tempo_gasto_min": 10,
+      "dependencias": [45, 46],
+      "subtarefas": [124, 125],
+      "recorrencia": { "tipo": "semanal", "intervalo": 1 },
+      "lixeira": false,
+      "arquivada": false
+    }
+  ],
+  "historico": [
+    { "ts": "2025-01-10T12:35:00Z", "acao": "criar", "alvo_id": 123, "por": "cli" }
+  ],
+  "indices": { "ultimo_id": 125 }
+}
+
+A escrita é atômica usando arquivo temporário e rename no mesmo diretório, e há backups rotativos com timestamps.
+
+** 9. Arquitetura e API interna (C++)
+
+A arquitetura separa núcleo (domínio de tarefas), armazenamento (leitura/gravação JSON), CLI (parser e comandos), TUI (camada visual baseada em ncurses), configuração (preferências globais e por coleção) e utilitários (logging, caminhos, tempo, lock de arquivo, escrita atômica e backups). As APIs principais seguem o desenho já proposto, mas sem o módulo de criptografia na v1. O armazenamento expõe uma interface IArmazenamento que carrega e salva snapshots do estado; no futuro, uma implementação criptografada poderá ser plugada sem alterar o restante do sistema.
+
+Modelos e serviços principais (excertos):
+
+/* include/afazer/core/tarefa.hpp */
+#pragma once
+#include <string>
+#include <vector>
+#include <optional>
+#include <cstdint>
+#include <chrono>
+
+namespace afazer::core {
+
+enum class Prioridade { baixa, media, alta };
+enum class Status { a_fazer, em_andamento, bloqueada, concluida, arquivada };
+
+struct Recorrencia {
+  enum class Tipo { diaria, semanal, mensal };
+  Tipo tipo;
+  uint32_t intervalo{1};
+};
+
+struct Tarefa {
+  int64_t id;
+  std::string titulo;
+  std::string descricao;
+  Prioridade prioridade{Prioridade::media};
+  Status status{Status::a_fazer};
+  std::vector<std::string> etiquetas;
+  std::optional<std::string> projeto;
+  std::chrono::system_clock::time_point criada_em;
+  std::chrono::system_clock::time_point modificada_em;
+  std::optional<std::chrono::sys_days> vencer_em;
+  std::optional<uint32_t> tempo_estimado_min;
+  std::optional<uint32_t> tempo_gasto_min;
+  std::vector<int64_t> dependencias;
+  std::vector<int64_t> subtarefas;
+  std::optional<Recorrencia> recorrencia;
+  bool lixeira{false};
+  bool arquivada{false};
+};
+
+struct Filtros {
+  std::optional<Status> status;
+  std::optional<Prioridade> prioridade;
+  std::optional<std::string> projeto;
+  std::vector<std::string> etiquetas;
+  std::optional<std::string> texto;
+  std::optional<std::chrono::sys_days> de;
+  std::optional<std::chrono::sys_days> ate;
+};
+
+} // namespace afazer::core
+
+/* include/afazer/core/servico_tarefas.hpp */
+#pragma once
+#include "tarefa.hpp"
+#include <expected>
+#include <vector>
+#include <string>
+
+namespace afazer::core {
+
+enum class Erro {
+  NaoEncontrado, Validacao, IO, Conflito, Bloqueio, Corrompido, NaoSuportado, Desconhecido
+};
+
+template <typename T>
+using Resultado = std::expected<T, Erro>;
+
+struct NovaTarefa {
+  std::string titulo;
+  std::string descricao;
+  Prioridade prioridade{Prioridade::media};
+  std::vector<std::string> etiquetas;
+  std::optional<std::string> projeto;
+  std::optional<std::chrono::sys_days> vencer_em;
+  std::optional<Recorrencia> recorrencia;
+};
+
+class IServicoTarefas {
+public:
+  virtual ~IServicoTarefas() = default;
+  virtual Resultado<int64_t> adicionar(const NovaTarefa&) = 0;
+  virtual Resultado<void> editar(int64_t id, const Tarefa& camposParciais) = 0;
+  virtual Resultado<void> concluir(int64_t id) = 0;
+  virtual Resultado<void> reabrir(int64_t id) = 0;
+  virtual Resultado<Tarefa> obter(int64_t id) const = 0;
+  virtual Resultado<std::vector<Tarefa>> listar(const Filtros&, int limite, int deslocamento, std::string ordenar) const = 0;
+  virtual Resultado<void> excluir(int64_t id, bool definitivo) = 0;
+  virtual Resultado<void> arquivar(int64_t id, bool valor) = 0;
+  virtual Resultado<void> desfazer() = 0;
+  virtual Resultado<void> refazer() = 0;
+};
+
+} // namespace afazer::core
+
+/* include/afazer/storage/armazenamento.hpp */
+#pragma once
+#include "../core/tarefa.hpp"
+#include <expected>
+#include <string>
+#include <vector>
+
+namespace afazer::storage {
+
+using afazer::core::Erro;
+template <typename T> using Resultado = std::expected<T, Erro>;
+
+struct EstadoColecao {
+  std::string id;
+  std::string nome;
+  uint64_t versao_schema{1};
+  uint64_t ultimo_id{0};
+};
+
+struct Snapshot {
+  EstadoColecao estado;
+  std::vector<afazer::core::Tarefa> tarefas;
+  // config, historico etc. podem ser incluídos aqui
+};
+
+class IArmazenamento {
+public:
+  virtual ~IArmazenamento() = default;
+  virtual Resultado<Snapshot> carregar(const std::string& caminho) = 0;
+  virtual Resultado<void> salvar(const std::string& caminho, const Snapshot&) = 0;
+  virtual Resultado<void> backup(const std::string& caminho) = 0;
+};
+
+} // namespace afazer::storage
+
+A CLI e a TUI consomem os serviços do núcleo e convertem erros em mensagens e códigos de saída. O parser de argumentos pode usar biblioteca leve open source (por exemplo, cxxopts) ou implementação própria; a dependência é opcional.
+
+** 10. Tratamento de erros e exceções
+
+Os fluxos previstos usam retornos com std::expected e códigos de erro do domínio. Exceções ficam para condições excepcionais (falha de alocação, invariantes). A camada de interface traduz erros em mensagens amigáveis e códigos de saída padronizados. Em versões futuras, ao habilitar criptografia, erros específicos de senha serão reintroduzidos.
+11. Concorrência, atomicidade e lock
+
+A gravação usa arquivo temporário no mesmo diretório, flush e fsync, seguida de rename atômico. O lock de arquivo previne concorrência em escrita (flock em Linux e LockFile em Windows), com mensagens claras em caso de bloqueio ativo. Há detecção e limpeza de arquivos temporários órfãos, além de restauração a partir do backup mais recente em caso de corrupção detectada.
+
+** 12. TUI (opcional)
+
+A TUI oferece lista de tarefas, painel de detalhes e barra de status, com atalhos comuns de terminal (setas/j/k para navegar, Enter para abrir, a para adicionar, e para editar, x para concluir, r para reabrir, / para filtrar, : para comandos, q para sair). O módulo é compilado apenas quando habilitado, para manter o executável enxuto quando não desejado.
+13. Testes
+
+Os testes unitários cobrem validações, regras de negócio, serialização/desserialização JSON, persistência, parser da CLI, filtros e ordenação. Testes de integração validam cenários ponta a ponta (inicializar, adicionar muitas tarefas, listar com filtros, exportar, concluir, restaurar de backup). Em Debug, sanitizers ajudam a detectar problemas de memória e comportamento indefinido. Fuzzing do parser JSON e do comando de importação pode ser adicionado como passo extra.
+14. Esqueleto do projeto e CMake
+
+A árvore do projeto inclui CMakeLists.txt na raiz e subdiretórios para core, storage, util, config, cli, tui (opcional), tests e docs. O executável afazer linka as bibliotecas internas. Não há dependência obrigatória de OpenSSL na v1.
+
+CMake (raiz, atualizado):
+
+cmake_minimum_required(VERSION 3.20)
+project(aFazer LANGUAGES CXX VERSION 0.1.0)
+
+option(AFAZER_BUILD_TESTES "Construir testes" ON)
+option(AFAZER_BUILD_TUI "Construir TUI (ncurses/PDCurses)" OFF)
+option(AFAZER_WARNING_AS_ERRORS "Tratar warnings como erros" OFF)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(MSVC)
+  add_compile_options(/W4 /permissive- /EHsc)
+else()
+  add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-fsanitize=address,undefined)
+    add_link_options(-fsanitize=address,undefined)
+  endif()
+endif()
+
+add_subdirectory(src/core)
+add_subdirectory(src/storage)
+add_subdirectory(src/util)
+add_subdirectory(src/config)
+add_subdirectory(src/cli)
+if(AFAZER_BUILD_TUI)
+  add_subdirectory(src/tui)
+endif()
+if(AFAZER_BUILD_TESTES)
+  add_subdirectory(tests)
+endif()
+
+install(TARGETS afazer RUNTIME DESTINATION bin)
+
+CMake dos módulos segue a estrutura proposta anteriormente, sem o subprojeto de criptografia. Para a TUI, somente se AFAZER_BUILD_TUI estiver ON, é feito find_package(Curses REQUIRED) e o link com ${CURSES_LIBRARIES}.
+
+Arquivos de código já esboçados (mantidos):
+
+/* src/cli/main.cpp */
+#include <iostream>
+#include "afazer/cli/app.hpp"
+
+int main(int argc, char** argv) {
+  try {
+    return afazer::cli::App{}.executar(argc, argv);
+  } catch (const std::exception& e) {
+    std::cerr << "Erro inesperado: " << e.what() << "\n";
+    return 1;
+  }
+}
+
+/* include/afazer/cli/app.hpp */
+#pragma once
+namespace afazer::cli {
+class App {
+public:
+  int executar(int argc, char** argv);
+};
+} // namespace afazer::cli
+
+/* include/afazer/util/arquivo_lock.hpp */
+#pragma once
+#include <string>
+#include <expected>
+
+namespace afazer::util {
+enum class ErroLock { EmUso, IO, Desconhecido };
+template <typename T> using Resultado = std::expected<T, ErroLock>;
+
+class ArquivoLock {
+public:
+  explicit ArquivoLock(const std::string& caminho);
+  Resultado<void> adquirir();
+  void liberar();
+  ~ArquivoLock();
+private:
+  std::string caminho_;
+  int handle_{-1};
+};
+} // namespace afazer::util
+
+** 15. Internacionalização
+
+O idioma padrão é pt-BR. As mensagens são centralizadas para facilitar eventual internacionalização futura, mas o suporte a múltiplos idiomas não faz parte da v1.
+16. Segurança
+
+Como não há criptografia nem senha na v1, o arquivo .todo é legível e editável por qualquer editor de texto. O programa comunica claramente essa característica. A segurança de integridade é tratada via escrita atômica, backups e validação estrutural do JSON. Quando a criptografia for introduzida, serão adotadas práticas de KDF robusto e criptografia autenticada, mantendo compatibilidade via migração de schema.
+
+** 17. Desempenho
+
+A operação preferencial é manter os dados em memória com índices simples para buscas por ID, status e etiquetas, e salvar em lote. O carregamento e a listagem devem permanecer responsivos mesmo com dezenas de milhares de tarefas, em hardware comum. Exportações devem preferir escrita em streaming para evitar picos de memória.
+
+** 18. Critérios de aceitação (amostra)
+
+Em Linux e Windows, o projeto compila com CMake e executa fluxos principais: iniciar coleção, adicionar milhares de tarefas, listar com filtros e ordenação, concluir e reabrir, exportar em formatos suportados, criar e restaurar backup. O arquivo temporário é sempre limpo, e a restauração a partir de backup funciona ao simular uma interrupção durante a gravação. A validação detecta JSON malformado e aponta linha/coluna sempre que possível.
+
+** 19. Itens para melhorias futuras (backlog de evolução)
+
+Há um conjunto de evoluções planejadas para versões posteriores, mantendo a arquitetura preparada desde o início. Entre os itens mapeados estão a proteção por senha e criptografia autenticada do arquivo .todo; derivação de chave com Argon2id e parâmetros ajustáveis; integração com notificações do sistema para lembretes; geração de scripts de auto-completar para bash, zsh, fish e PowerShell; suporte a mais idiomas além de pt-BR, com catálogos de mensagens; empacotamento e distribuição simplificados; provedores alternativos de armazenamento, incluindo bancos de dados com migração transparente; API local para automação; melhorias de TUI com mais widgets e acessibilidade; fuzzing sistemático do parser e dos importadores; e integração com ferramentas populares como Taskwarrior ou todo.txt para importação e sincronização.
