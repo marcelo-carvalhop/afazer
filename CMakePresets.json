@@ -1,0 +1,77 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "description": "Configuração padrão (Debug, Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "description": "Build Debug com Ninja e sanitizers",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "description": "Build otimizado para produção",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "msvc-debug",
+      "description": "Build Debug com MSVC",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "msvc-release",
+      "description": "Build Release com MSVC",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build-msvc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "msvc-debug",
+      "configurePreset": "msvc-debug"
+    },
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc-release"
+    }
+  ]
+}
