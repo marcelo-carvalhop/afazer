@@ -51,6 +51,7 @@ target_include_directories(afazer PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # Adiciona os arquivos do domínio
 add_library(afazer_dominio
   src/dominio/tarefa.cpp
+  src/dominio/filtros.cpp
 )
 target_include_directories(afazer_dominio PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
@@ -62,6 +63,33 @@ target_link_libraries(afazer PRIVATE afazer_dominio)
 
 # Define a versão como macro no código
 target_compile_definitions(afazer PRIVATE AFAZER_VERSION="${PROJECT_VERSION}")
+
+# Baixa e adiciona o Catch2 como dependência
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.4.0 # Use a versão mais recente estável
+)
+FetchContent_MakeAvailable(Catch2)
+
+# Baixa e adiciona a biblioteca JSON
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.2 # Use a versão mais recente estável
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# Linka a biblioteca JSON ao domínio
+target_link_libraries(afazer_dominio PUBLIC nlohmann_json::nlohmann_json)
+
+# Adiciona o executável de testes
+add_executable(tests
+  tests/tarefas_tests.cpp
+  tests/filtros_tests.cpp
+)
+target_link_libraries(tests PRIVATE afazer_dominio Catch2::Catch2WithMain)
 
 # Instalação básica
 install(TARGETS afazer RUNTIME DESTINATION bin)
