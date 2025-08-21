@@ -1,0 +1,55 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <optional>
+#include <chrono>
+
+namespace afazer::dominio {
+
+    enum class Status {
+        Pendente,
+        Concluida,
+        Cancelada
+    };
+
+    enum class Prioridade {
+        Baixa,
+        Media,
+        Alta
+    };
+
+    class Tarefa {
+    public:
+        //Construtor
+        Tarefa(std::string titulo, std::optional<std::string> descricao = std::nullopt, Prioridade prioridade = Prioridade::Media);
+
+        ///Getters
+        int id() const;
+        const std::string& titulo() const;
+        const std::optional<std::string>& descricao() const;
+        Status status() const;
+        Prioridade prioridade() const;
+        const std::chrono::system_clock::time_point& dataCriacao() const;
+        const std::optional<std::chrono::system_clock::time_point>& dataConclusao() const;
+        const std::vector<std::string>& etiquetas() const;
+
+        //Métodos de negócio
+        void concluir();
+        void cancelar();
+        void adicionarEtiqueta(const std::string& etiqueta);
+        void removerEtiqueta(const std::string& etiqueta);
+    
+    private:
+        int id_;
+        std::string titulo_;
+        std::optional<std::string> descricao_;
+        Status status_;
+        Prioridade prioridade_;
+        std::chrono::system_clock::time_point dataCriacao_;
+        std::optional<std::chrono::system_clock::time_point> dataConclusao_;
+        std::vector<std::string> etiquetas_;
+        
+        //Gera um ID único para cada Tarefa
+        static int gerarID();
+    };
+} //namespace afazer::dominio

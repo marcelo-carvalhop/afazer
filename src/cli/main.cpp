@@ -1,12 +1,17 @@
-/* src/cli/main  */
+#include "afazer/dominio/tarefa.hpp"
 #include <iostream>
-#include "afazer/cli/app.hpp"
 
-int main(int argc, char** argv){
-  try {
-    return afazer::cli::App{}.executar(argc, argv);
-  } catch (const std::exception& e) {
-    std::cerr << "Erro inesperado: " << e.what() << "\n";
-    return 1;
-  }
+int main() {
+    using namespace afazer::dominio;
+
+    try {
+        Tarefa tarefa("Estudar C++", "Revisar RAII e smart pointers", Prioridade::Alta);
+        std::cout << "Tarefa criada com sucesso: " << tarefa.titulo() << "\n";
+        tarefa.concluir();
+        std::cout << "Tarefa concluída com sucesso!\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Erro: " << e.what() << "\n";
+    }
+
+    return 0;
 }

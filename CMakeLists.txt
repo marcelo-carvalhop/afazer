@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 # Nome e versão do projeto
 project(aFazer LANGUAGES CXX VERSION 0.1.0)
 
-# Opções (usaremos mais nos próximos capítulos)
+# Opções
 option(AFAZER_BUILD_TESTES "Construir testes" ON)
 option(AFAZER_BUILD_TUI "Construir TUI (ncurses/PDCurses)" OFF)
 option(AFAZER_WARNING_AS_ERRORS "Tratar warnings como erros" OFF)
@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Exporta compile_commands.json (bom para clangd/linters)
+# Exporta compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Flags por compilador
@@ -34,16 +34,34 @@ else()
   endif()
 endif()
 
-# Executável inicial (somente CLI por enquanto)
+# Adiciona a biblioteca afazer_util
+add_library(afazer_util
+  src/util/arquivo_lock.cpp
+  src/util/tempo.cpp
+)
+target_include_directories(afazer_util PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# Adiciona o executável afazer
 add_executable(afazer
   src/cli/main.cpp
   src/cli/app.cpp
 )
-
 target_include_directories(afazer PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+# Adiciona os arquivos do domínio
+add_library(afazer_dominio
+  src/dominio/tarefa.cpp
+)
+target_include_directories(afazer_dominio PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# Linka a biblioteca afazer_util ao executável afazer
+target_link_libraries(afazer PRIVATE afazer_util)
+
+# Linka a biblioteca afazer_dominio ao executável afazer
+target_link_libraries(afazer PRIVATE afazer_dominio)
 
 # Define a versão como macro no código
 target_compile_definitions(afazer PRIVATE AFAZER_VERSION="${PROJECT_VERSION}")
 
-# Instalação básica (veremos mais adiante)
+# Instalação básica
 install(TARGETS afazer RUNTIME DESTINATION bin)
