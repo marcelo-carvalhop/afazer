@@ -18,6 +18,13 @@ namespace afazer::dominio {
         Alta
     };
 
+    enum class Periodicidade {
+        Nenhuma,
+        Diaria,
+        Semanal,
+        Mensal
+    };
+
     class Tarefa {
     public:
         //Construtor
@@ -32,12 +39,16 @@ namespace afazer::dominio {
         const std::chrono::system_clock::time_point& dataCriacao() const;
         const std::optional<std::chrono::system_clock::time_point>& dataConclusao() const;
         const std::vector<std::string>& etiquetas() const;
+        Periodicidade periodicidade() const;
+        const std::optional<std::chrono::system_clock::time_point>& proximaOcorrencia() const;
 
         //Métodos de negócio
         void concluir();
         void cancelar();
         void adicionarEtiqueta(const std::string& etiqueta);
         void removerEtiqueta(const std::string& etiqueta);
+        void definirPeriodicidade(Periodicidade periodicidade);
+        void calcularProximaOcorrencia();
     
     private:
         int id_;
@@ -48,6 +59,8 @@ namespace afazer::dominio {
         std::chrono::system_clock::time_point dataCriacao_;
         std::optional<std::chrono::system_clock::time_point> dataConclusao_;
         std::vector<std::string> etiquetas_;
+        Periodicidade periodicidade_;
+        std::optional<std::chrono::system_clock::time_point> proximaOcorrencia_;
         
         //Gera um ID único para cada Tarefa
         static int gerarID();

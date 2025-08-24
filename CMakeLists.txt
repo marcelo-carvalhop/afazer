@@ -52,6 +52,8 @@ target_include_directories(afazer PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_library(afazer_dominio
   src/dominio/tarefa.cpp
   src/dominio/filtros.cpp
+  src/dominio/exportador.cpp
+  src/dominio/relatorios.cpp
 )
 target_include_directories(afazer_dominio PUBLIC ${CMAKE_SOURCE_DIR}/include)
 

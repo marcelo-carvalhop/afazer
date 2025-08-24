@@ -10,7 +10,7 @@ namespace afazer::dominio{
 // Construtor
 Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Prioridade prioridade)
     : id_(gerarID()), titulo_(std::move(titulo)), descricao_(std::move(descricao)), status_(Status::Pendente),
-      prioridade_(prioridade), dataCriacao_(std::chrono::system_clock::now()) {
+      prioridade_(prioridade), dataCriacao_(std::chrono::system_clock::now()), periodicidade_(Periodicidade::Nenhuma) {
     if (titulo_.empty()) {
         throw std::invalid_argument("O título da tarefa não pode ser vazio.");
     }
@@ -41,6 +41,14 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
         return etiquetas_;
     }
 
+    Periodicidade Tarefa::periodicidade() const {
+    return periodicidade_;  
+    }
+
+    const std::optional<std::chrono::system_clock::time_point>& Tarefa::proximaOcorrencia() const {
+        return proximaOcorrencia_;
+    }
+
     // Métodos de negócio
 
     void Tarefa::concluir() {
@@ -67,6 +75,39 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
 
     void Tarefa::removerEtiqueta(const std::string& etiqueta) {
         etiquetas_.erase(std::remove(etiquetas_.begin(), etiquetas_.end(), etiqueta), etiquetas_.end());
+    }
+
+    void Tarefa::definirPeriodicidade(Periodicidade periodicidade) {
+        periodicidade_ = periodicidade;
+        calcularProximaOcorrencia();
+    }
+
+    void Tarefa::calcularProximaOcorrencia() {
+        if (periodicidade_ == Periodicidade::Nenhuma) {
+            proximaOcorrencia_ = std::nullopt;
+            return;
+        }
+
+        auto agora = std::chrono::system_clock::now();
+        if (!dataConclusao_) {
+            proximaOcorrencia_ = agora;
+            return;
+        }
+
+        switch (periodicidade_) {
+            case Periodicidade::Diaria:
+                proximaOcorrencia_ = *dataConclusao_ + std::chrono::hours(24);
+                break;
+            case Periodicidade::Semanal:
+                proximaOcorrencia_ = *dataConclusao_ + std::chrono::hours(24 * 7);
+                break;
+            case Periodicidade::Mensal:
+                proximaOcorrencia_ = *dataConclusao_ + std::chrono::hours(24 * 30);
+                break;
+            default:
+                proximaOcorrencia_ = std::nullopt;
+                break;
+        }
     }
 
     //Gera um ID único
