@@ -25,6 +25,10 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
         return titulo_;
     }
 
+    const std::optional<std::string>& Tarefa::descricao() const {
+        return descricao_;
+    }
+
     Status Tarefa::status() const {
         return status_;
     }
@@ -47,6 +51,10 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
 
     const std::optional<std::chrono::system_clock::time_point>& Tarefa::proximaOcorrencia() const {
         return proximaOcorrencia_;
+    }
+
+    const std::optional<std::chrono::system_clock::time_point>& Tarefa::dataVencimento() const {
+        return dataVencimento_;
     }
 
     // Métodos de negócio
@@ -108,6 +116,26 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
                 proximaOcorrencia_ = std::nullopt;
                 break;
         }
+    }
+
+    void Tarefa::definirDataVencimento(const std::chrono::system_clock::time_point& dataVencimento) {
+        dataVencimento_ = dataVencimento;
+    }
+
+    bool Tarefa::estaAtrasada() const {
+        if (!dataVencimento_ || status_ == Status::Concluida || status_ == Status::Cancelada) {
+            return false;
+        }
+        return std::chrono::system_clock::now() > *dataVencimento_;
+    }
+
+    bool Tarefa::estaProximaDeVencer(int dias) const {
+        if (!dataVencimento_ || status_ == Status::Concluida || status_ == Status::Cancelada) {
+            return false;
+        }
+        auto agora = std::chrono::system_clock::now();
+        auto limite = agora + std::chrono::hours(24 * dias);
+        return *dataVencimento_ <= limite && *dataVencimento_ > agora;
     }
 
     //Gera um ID único

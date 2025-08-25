@@ -41,6 +41,7 @@ namespace afazer::dominio {
         const std::vector<std::string>& etiquetas() const;
         Periodicidade periodicidade() const;
         const std::optional<std::chrono::system_clock::time_point>& proximaOcorrencia() const;
+        const std::optional<std::chrono::system_clock::time_point>& dataVencimento() const;
 
         //Métodos de negócio
         void concluir();
@@ -49,6 +50,9 @@ namespace afazer::dominio {
         void removerEtiqueta(const std::string& etiqueta);
         void definirPeriodicidade(Periodicidade periodicidade);
         void calcularProximaOcorrencia();
+        void definirDataVencimento(const std::chrono::system_clock::time_point& dataVencimento);
+        bool estaAtrasada() const;
+        bool estaProximaDeVencer(int dias) const;    
     
     private:
         int id_;
@@ -61,6 +65,7 @@ namespace afazer::dominio {
         std::vector<std::string> etiquetas_;
         Periodicidade periodicidade_;
         std::optional<std::chrono::system_clock::time_point> proximaOcorrencia_;
+        std::optional<std::chrono::system_clock::time_point> dataVencimento_;
         
         //Gera um ID único para cada Tarefa
         static int gerarID();

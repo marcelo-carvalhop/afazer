@@ -54,6 +54,8 @@ add_library(afazer_dominio
   src/dominio/filtros.cpp
   src/dominio/exportador.cpp
   src/dominio/relatorios.cpp
+  src/dominio/notificador.cpp
+  src/dominio/configuracoes.cpp
 )
 target_include_directories(afazer_dominio PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
@@ -88,8 +90,11 @@ target_link_libraries(afazer_dominio PUBLIC nlohmann_json::nlohmann_json)
 
 # Adiciona o executável de testes
 add_executable(tests
-  tests/tarefas_tests.cpp
-  tests/filtros_tests.cpp
+  tests/tarefas_test.cpp
+  tests/filtros_test.cpp
+  tests/notificador_test.cpp
+  tests/relatorios_test.cpp
+  tests/configuracoes_test.cpp
 )
 target_link_libraries(tests PRIVATE afazer_dominio Catch2::Catch2WithMain)
 

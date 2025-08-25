@@ -29,6 +29,13 @@ namespace afazer::dominio {
         return contagem;
     }
 
+    std::vector<Tarefa> Relatorios::tarefasPorPrioridade(const std::vector<Tarefa>& tarefas, Prioridade prioridade) {
+        std::vector<Tarefa> resultado;
+        std::copy_if(tarefas.begin(), tarefas.end(), std::back_inserter(resultado),
+                    [prioridade](const Tarefa& tarefa) { return tarefa.prioridade() == prioridade; });
+        return resultado;
+    }
+
     std::map<std::string, std::vector<Tarefa>> Relatorios::tarefasPorEtiqueta(const std::vector<Tarefa>& tarefas) {
         std::map<std::string, std::vector<Tarefa>> agrupadas;
         for (const auto& tarefa : tarefas) {
@@ -37,13 +44,29 @@ namespace afazer::dominio {
             }
         }
         return agrupadas;
-    }std::string Relatorios::exportarContagemPorStatusJSON(const std::map<Status, int>& contagem) {
-    json jContagem;
-    for (const auto& [status, quantidade] : contagem) {
-        jContagem[std::to_string(static_cast<int>(status))] = quantidade;
     }
-    return jContagem.dump(4); // Formata o JSON com indentação de 4 espaços
-}
+    
+    std::vector<Tarefa> Relatorios::tarefasAtrasadas(const std::vector<Tarefa>& tarefas) {
+        std::vector<Tarefa> atrasadas;
+        std::copy_if(tarefas.begin(), tarefas.end(), std::back_inserter(atrasadas),
+                    [](const Tarefa& tarefa) { return tarefa.estaAtrasada(); });
+        return atrasadas;
+    }
+
+    std::vector<Tarefa> Relatorios::tarefasProximasDeVencer(const std::vector<Tarefa>& tarefas, int dias) {
+        std::vector<Tarefa> proximas;
+        std::copy_if(tarefas.begin(), tarefas.end(), std::back_inserter(proximas),
+                    [dias](const Tarefa& tarefa) { return tarefa.estaProximaDeVencer(dias); });
+        return proximas;
+    }
+    
+    std::string Relatorios::exportarContagemPorStatusJSON(const std::map<Status, int>& contagem) {
+        json jContagem;
+        for (const auto& [status, quantidade] : contagem) {
+            jContagem[std::to_string(static_cast<int>(status))] = quantidade;
+        }
+        return jContagem.dump(4); // Formata o JSON com indentação de 4 espaços
+    }
 
     std::string Relatorios::exportarContagemPorPrioridadeJSON(const std::map<Prioridade, int>& contagem) {
         json jContagem;

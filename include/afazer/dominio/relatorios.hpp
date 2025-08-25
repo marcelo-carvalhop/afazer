@@ -23,6 +23,12 @@ namespace afazer::dominio {
         // Relatório de tarefas agrupadas por etiqueta
         static std::map<std::string, std::vector<Tarefa>> tarefasPorEtiqueta(const std::vector<Tarefa>& tarefas);
 
+        // Relatório de tarefas atrasadas
+        static std::vector<Tarefa> tarefasAtrasadas(const std::vector<Tarefa>& tarefas);
+
+        // Relatório de tarefas próximas de vencer
+        static std::vector<Tarefa> tarefasProximasDeVencer(const std::vector<Tarefa>& tarefas, int dias);
+
         // Exporta relatório de contagem por status para JSON
         static std::string exportarContagemPorStatusJSON(const std::map<Status, int>& contagem);
 
@@ -34,6 +40,8 @@ namespace afazer::dominio {
 
         // Exporta relatório de tarefas agrupadas por etiqueta para CSV
         static std::string exportarTarefasPorEtiquetaCSV(const std::map<std::string, std::vector<Tarefa>>& agrupadas);
+
+
     };
 
 } // namespace afazer::dominio

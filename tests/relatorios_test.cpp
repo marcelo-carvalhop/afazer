@@ -111,3 +111,41 @@ TEST_CASE("Exporta tarefas por etiqueta para CSV", "[Relatorios]") {
     REQUIRE(csv.find("trabalho") != std::string::npos);
     REQUIRE(csv.find("pessoal") != std::string::npos);
 }
+
+TEST_CASE("Relatório de tarefas atrasadas", "[Relatorios]") {
+    using namespace afazer::dominio;
+
+    Tarefa t1("Tarefa atrasada");
+    auto agora = std::chrono::system_clock::now();
+    auto ontem = agora - std::chrono::hours(24);
+    t1.definirDataVencimento(ontem);
+
+    Tarefa t2("Tarefa dentro do prazo");
+    auto amanha = agora + std::chrono::hours(24);
+    t2.definirDataVencimento(amanha);
+
+    std::vector<Tarefa> tarefas = {t1, t2};
+    auto atrasadas = Relatorios::tarefasAtrasadas(tarefas);
+
+    REQUIRE(atrasadas.size() == 1);
+    REQUIRE(atrasadas[0].titulo() == "Tarefa atrasada");
+}
+
+TEST_CASE("Relatório de tarefas próximas de vencer", "[Relatorios]") {
+    using namespace afazer::dominio;
+
+    Tarefa t1("Tarefa próxima de vencer");
+    auto agora = std::chrono::system_clock::now();
+    auto amanha = agora + std::chrono::hours(24);
+    t1.definirDataVencimento(amanha);
+
+    Tarefa t2("Tarefa fora do prazo");
+    auto daquiTresDias = agora + std::chrono::hours(24 * 3);
+    t2.definirDataVencimento(daquiTresDias);
+
+    std::vector<Tarefa> tarefas = {t1, t2};
+    auto proximas = Relatorios::tarefasProximasDeVencer(tarefas, 2);
+
+    REQUIRE(proximas.size() == 1);
+    REQUIRE(proximas[0].titulo() == "Tarefa próxima de vencer");
+}

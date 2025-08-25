@@ -45,3 +45,33 @@ TEST_CASE("Tarefa sem periodicidade não calcula próxima ocorrência", "[Tarefa
 
     REQUIRE_FALSE(tarefa.proximaOcorrencia().has_value());
 }
+
+TEST_CASE("Tarefa com data de vencimento atrasada", "[Tarefa]") {
+    using namespace afazer::dominio;
+
+    Tarefa tarefa("Tarefa atrasada");
+    auto agora = std::chrono::system_clock::now();
+    auto ontem = agora - std::chrono::hours(24);
+    tarefa.definirDataVencimento(ontem);
+
+    REQUIRE(tarefa.estaAtrasada());
+}
+
+TEST_CASE("Tarefa com data de vencimento próxima", "[Tarefa]") {
+    using namespace afazer::dominio;
+
+    Tarefa tarefa("Tarefa próxima de vencer");
+    auto agora = std::chrono::system_clock::now();
+    auto amanha = agora + std::chrono::hours(24);
+    tarefa.definirDataVencimento(amanha);
+
+    REQUIRE(tarefa.estaProximaDeVencer(1));
+    REQUIRE_FALSE(tarefa.estaAtrasada());
+}
+
+TEST_CASE("Tarefa sem data de vencimento não está atrasada", "[Tarefa]") {
+    using namespace afazer::dominio;
+
+    Tarefa tarefa("Tarefa sem vencimento");
+    REQUIRE_FALSE(tarefa.estaAtrasada());
+}
