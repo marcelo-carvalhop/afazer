@@ -57,6 +57,10 @@ Tarefa::Tarefa(std::string titulo, std::optional<std::string> descricao, Priorid
         return dataVencimento_;
     }
 
+    const std::optional<std::chrono::system_clock::time_point>& Tarefa::dataConclusao() const {
+        return dataConclusao_;
+    }
+
     // Métodos de negócio
 
     void Tarefa::concluir() {

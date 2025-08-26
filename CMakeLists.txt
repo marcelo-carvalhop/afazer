@@ -56,6 +56,7 @@ add_library(afazer_dominio
   src/dominio/relatorios.cpp
   src/dominio/notificador.cpp
   src/dominio/configuracoes.cpp
+  src/dominio/logger.cpp
 )
 target_include_directories(afazer_dominio PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
@@ -95,6 +96,10 @@ add_executable(tests
   tests/notificador_test.cpp
   tests/relatorios_test.cpp
   tests/configuracoes_test.cpp
+  tests/integracao_test.cpp
+  tests/configuracoes_persistencia_tests.cpp
+  tests/logger_tests.cpp
+  tests/logger_relatorios_tests.cpp
 )
 target_link_libraries(tests PRIVATE afazer_dominio Catch2::Catch2WithMain)
 

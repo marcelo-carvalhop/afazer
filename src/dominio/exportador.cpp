@@ -7,6 +7,21 @@ namespace afazer::dominio {
 
     using json = nlohmann::json;
 
+    Exportador::Exportador(const Configuracoes& configuracoes) : configuracoes_(configuracoes) {}
+
+    std::string Exportador::exportar(const std::vector<Tarefa>& tarefas) const {
+        // Obtém o formato de exportação configurado
+        std::string formato = configuracoes_.obterComPadrao("formato_exportacao", "json");
+
+        if (formato == "json") {
+            return paraJSON(tarefas);
+        } else if (formato == "csv") {
+            return paraCSV(tarefas);
+        } else {
+            throw std::runtime_error("Formato de exportação desconhecido: " + formato);
+        }
+    }
+
     std::string Exportador::paraJSON(const std::vector<Tarefa>& tarefas) {
         json jTarefas = json::array();
 
@@ -73,39 +88,23 @@ std::vector<Tarefa> Exportador::deJSON(const std::string& jsonString) {
     json jTarefas = json::parse(jsonString);
     std::vector<Tarefa> tarefas;
 
-    for (const auto& jTarefa : jTarefas) {
-        // Extrai os campos do JSON
-        std::string titulo = jTarefa.at("titulo").get<std::string>();
-        std::string descricao = jTarefa.at("descricao").get<std::string>();
-        Prioridade prioridade = static_cast<Prioridade>(jTarefa.at("prioridade").get<int>());
-        auto dataConclusao = jTarefa.at("dataConclusao").is_null()
-                                 ? std::nullopt
-                                 : std::optional<std::chrono::system_clock::time_point>(
-                                       std::chrono::system_clock::time_point(
-                                           std::chrono::seconds(jTarefa.at("dataConclusao").get<long int>())));
+        for (const auto& jTarefa : jTarefas) {
+            std::string titulo = jTarefa.at("titulo").get<std::string>();
+            std::string descricao = jTarefa.at("descricao").get<std::string>();
+            Prioridade prioridade = static_cast<Prioridade>(jTarefa.at("prioridade").get<int>());
 
-        std::vector<std::string> etiquetas = jTarefa.at("etiquetas").get<std::vector<std::string>>();
+            Tarefa tarefa(titulo, descricao, prioridade);
 
-        // Cria a tarefa
-        Tarefa tarefa(titulo, descricao, prioridade);
+            // Adiciona etiquetas
+            for (const auto& etiqueta : jTarefa.at("etiquetas").get<std::vector<std::string>>()) {
+                tarefa.adicionarEtiqueta(etiqueta);
+            }
 
-        // Adiciona etiquetas
-        for (const auto& etiqueta : etiquetas) {
-            tarefa.adicionarEtiqueta(etiqueta);
+            tarefas.push_back(std::move(tarefa));
         }
 
-        // Define o status e a data de conclusão, se necessário
-        if (jTarefa.at("status").get<int>() == static_cast<int>(Status::Concluida)) {
-            tarefa.concluir();
-        } else if (jTarefa.at("status").get<int>() == static_cast<int>(Status::Cancelada)) {
-            tarefa.cancelar();
-        }
-
-        tarefas.push_back(std::move(tarefa));
+        return tarefas;
     }
-
-    return tarefas;
-}
 
 std::vector<Tarefa> Exportador::deCSV(const std::string& csvString) {
     std::vector<Tarefa> tarefas;
@@ -119,7 +118,6 @@ std::vector<Tarefa> Exportador::deCSV(const std::string& csvString) {
         std::istringstream linhaStream(linha);
         std::string campo;
 
-        // Extrai os campos do CSV
         std::getline(linhaStream, campo, ',');
         std::string titulo = campo;
 
@@ -129,28 +127,7 @@ std::vector<Tarefa> Exportador::deCSV(const std::string& csvString) {
         std::getline(linhaStream, campo, ',');
         Prioridade prioridade = static_cast<Prioridade>(std::stoi(campo));
 
-        std::getline(linhaStream, campo, ',');
-        auto dataConclusao = (campo != "null")
-                                 ? std::optional<std::chrono::system_clock::time_point>(
-                                       std::chrono::system_clock::time_point(
-                                           std::chrono::seconds(std::stol(campo))))
-                                 : std::nullopt;
-
-        std::getline(linhaStream, campo, ',');
-        std::vector<std::string> etiquetas;
-        std::istringstream etiquetasStream(campo);
-        std::string etiqueta;
-        while (std::getline(etiquetasStream, etiqueta, ';')) {
-            etiquetas.push_back(etiqueta);
-        }
-
-        // Cria a tarefa
         Tarefa tarefa(titulo, descricao, prioridade);
-
-        // Adiciona etiquetas
-        for (const auto& etiqueta : etiquetas) {
-            tarefa.adicionarEtiqueta(etiqueta);
-        }
 
         tarefas.push_back(std::move(tarefa));
     }
